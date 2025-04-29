@@ -140,7 +140,8 @@
 
         // Configuration de l'API Google Drive
         const CLIENT_ID = '542162240722-hfi2pssi6lt4tvtdchd2dph2ep2ukqld.apps.googleusercontent.com'; // Remplacez par votre ID client
-        const SCOPES = 'https://www.googleapis.com/auth/drive.file';
+        const SCOPES = ['https://www.googleapis.com/auth/drive.file'];
+        let gapiInitialized = false; // Track if gapi is initialized
 
         function showErrorMessage(message) {
             errorMessageDiv.style.display = 'block';
@@ -190,27 +191,43 @@
             statusText.textContent = 'Téléchargement en cours...';
             fileStatusList.innerHTML = ''; // Clear previous status
 
-            gapi.load('client', () => {
-                gapi.client.init({
-                    clientId: CLIENT_ID,
-                    discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
-                    scope: SCOPES
-                }).then(() => {
-                    if (gapi.auth2.getAuthInstance().isSignedIn.get()) {
-                        handleFileUploads(studentName, courseName, files);
-                    } else {
-                        gapi.auth2.getAuthInstance().signIn().then(() => {
+            // Initialize gapi and handle upload
+            if (!gapiInitialized) {
+                gapi.load('client', () => {
+                    gapi.client.init({
+                        clientId: CLIENT_ID,
+                        discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
+                        scope: SCOPES
+                    }).then(() => {
+                        gapiInitialized = true; // Set flag to true after successful init
+                        if (gapi.auth2.getAuthInstance().isSignedIn.get()) {
                             handleFileUploads(studentName, courseName, files);
-                        }).catch(error => {
-                            uploadStatus.style.display = 'none';
-                            showErrorMessage('Erreur de connexion à Google Drive : ' + error.message);
-                        });
-                    }
-                }).catch(error => {
-                    uploadStatus.style.display = 'none';
-                    showErrorMessage('Erreur lors de l\'initialisation de l\'API Google Drive : ' + error.message);
+                        } else {
+                            gapi.auth2.getAuthInstance().signIn().then(() => {
+                                handleFileUploads(studentName, courseName, files);
+                            }).catch(error => {
+                                uploadStatus.style.display = 'none';
+                                showErrorMessage('Erreur de connexion à Google Drive : ' + error.message);
+                            });
+                        }
+                    }).catch(error => {
+                        uploadStatus.style.display = 'none';
+                        showErrorMessage('Erreur lors de l\'initialisation de l\'API Google Drive : ' + error.message);
+                    });
                 });
-            });
+            } else {
+                // gapi is already initialized, proceed with upload
+                if (gapi.auth2.getAuthInstance().isSignedIn.get()) {
+                    handleFileUploads(studentName, courseName, files);
+                } else {
+                    gapi.auth2.getAuthInstance().signIn().then(() => {
+                        handleFileUploads(studentName, courseName, files);
+                    }).catch(error => {
+                        uploadStatus.style.display = 'none';
+                        showErrorMessage('Erreur de connexion à Google Drive : ' + error.message);
+                    });
+                }
+            }
         });
 
         function handleFileUploads(studentName, courseName, files) {
@@ -383,6 +400,8 @@
         if (isAdmin) {
             adminView.style.display = 'block';
             updateAdminView();
+        } else {
+            adminView.style.display = 'none';
         }
     </script>
 </body>
