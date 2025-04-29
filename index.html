@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Téléchargement de fichiers étudiants</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+    <script src="https://apis.google.com/js/api.js"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="container mx-auto p-8 bg-white rounded-lg shadow-md">
+        <div class="flex justify-center mb-6">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/f/f7/Est-khenifra.png" alt="Logo de l'université" style="width: 150px; height: auto;">
+        </div>
+        <h1 class="text-3xl font-semibold text-blue-600 text-center mb-6">Téléchargement de fichiers étudiants</h1>
+        <p class="text-gray-700 text-center mb-8">Téléchargez vos fichiers et PDF de cours.</p>
+
+        <div class="mb-8 text-center text-sm">
+            <p class="text-gray-700">
+                Chers étudiants,
+            </p>
+            <p class="text-gray-700">
+                Nous sommes ravis de lancer cette plateforme dédiée à faciliter votre participation.
+            </p>
+            <p class="text-gray-700">
+                 N'hésitez pas à télécharger vos fichiers.
+            </p>
+            <p class="text-gray-700">
+                Nous vous remercions de votre contribution.
+            </p>
+        </div>
+
+        <div id="student-form" class="mb-6">
+            <form id="uploadForm" class="space-y-4">
+                <div>
+                    <label for="studentName" class="block text-gray-700 text-sm font-bold mb-2">Nom de l'étudiant :</label>
+                    <input type="text" id="studentName" required class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                </div>
+                <div>
+                    <label for="courseName" class="block text-gray-700 text-sm font-bold mb-2">Nom du cours :</label>
+                    <input type="text" id="courseName" required class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                </div>
+                <div>
+                    <label for="files" class="block text-gray-700 text-sm font-bold mb-2">Télécharger les fichiers :</label>
+                    <input type="file" id="files" multiple required class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                    <p id="file-error" class="text-red-500 text-xs italic" style="display: none;"></p>
+                </div>
+                <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Télécharger les fichiers</button>
+            </form>
+            <div id="upload-message" class="mt-4 text-green-600 font-semibold" style="display: none;"></div>
+        </div>
+
+        <div id="error-message" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mt-6" style="display: none;" role="alert">
+            <strong class="font-bold">Erreur :</strong>
+            <span class="block sm:inline" id="error-text"></span>
+        </div>
+    </div>
+
+    <script>
+        const uploadForm = document.getElementById('uploadForm');
+        const studentNameInput = document.getElementById('studentName');
+        const courseNameInput = document.getElementById('courseName');
+        const filesInput = document.getElementById('files');
+        const uploadMessage = document.getElementById('upload-message');
+        const errorMessageDiv = document.getElementById('error-message');
+        const errorText = document.getElementById('error-text');
+        const fileError = document.getElementById('file-error');
+
+        // Configuration de l'API Google Drive
+        const CLIENT_ID = 'YOUR_GOOGLE_DRIVE_CLIENT_ID'; // Remplacez par votre ID client
+        const SCOPES = ['https://www.googleapis.com/auth/drive.file'];
+
+        function showErrorMessage(message) {
+            errorMessageDiv.style.display = 'block';
+            errorText.textContent = message;
+        }
+
+        function hideErrorMessage() {
+            errorMessageDiv.style.display = 'none';
+            errorText.textContent = '';
+        }
+
+        function validateFiles() {
+            if (!filesInput.value) {
+                fileError.textContent = "Veuillez sélectionner les fichiers à télécharger.";
+                fileError.style.display = "block";
+                return false;
+            }
+
+            const files = filesInput.files;
+            for (let i = 0; i < files.length; i++) {
+                if (files[i].size > 10 * 1024 * 1024) { // Limite de 10 Mo par fichier
+                    fileError.textContent = "Chaque fichier doit être inférieur à 10 Mo.";
+                    fileError.style.display = "block";
+                    return false;
+                }
+            }
+
+            fileError.style.display = "none";
+            return true;
+        }
+
+        filesInput.addEventListener('change', validateFiles);
+
+        uploadForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            hideErrorMessage();
+
+            if (!validateFiles()) {
+                return;
+            }
+
+            const studentName = studentNameInput.value;
+            const courseName = courseNameInput.value;
+            const files = filesInput.files;
+
+            uploadMessage.textContent = 'Téléchargement des fichiers...';
+            uploadMessage.style.display = 'block';
+
+            gapi.load('client', () => {
+                gapi.client.init({
+                    clientId: CLIENT_ID,
+                    discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
+                    scope: SCOPES
+                }).then(() => {
+                    if (gapi.auth2.getAuthInstance().isSignedIn.get()) {
+                        handleFileUploads(studentName, courseName, files);
+                    } else {
+                        gapi.auth2.getAuthInstance().signIn().then(() => {
+                            handleFileUploads(studentName, courseName, files);
+                        }).catch(error => {
+                            uploadMessage.style.display = 'none';
+                            showErrorMessage('Erreur de connexion à Google Drive : ' + error.message);
+                        });
+                    }
+                }).catch(error => {
+                    uploadMessage.style.display = 'none';
+                    showErrorMessage('Erreur lors de l\'initialisation de l\'API Google Drive : ' + error.message);
+                });
+            });
+        });
+
+        function handleFileUploads(studentName, courseName, files) {
+            let uploadedFileCount = 0;
+            const totalFiles = files.length;
+            const folderName = `${studentName}_${courseName}_${Date.now()}`; // Nom de dossier unique
+
+             // Fonction pour gérer le téléchargement d'un seul fichier
+            function uploadFile(file, folderId) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const fileData = e.target.result;
+                    const boundary = '-------314159265358979323846';
+                    const delimiter = "\r\n--" + boundary + "\r\n";
+                    const close_delim = "\r\n--" + boundary + "--";
+
+                    const metadata = {
+                        name: file.name,
+                        mimeType: file.type,
+                        parents: [folderId] // Télécharger dans le dossier
+                    };
+
+                    const multipartRequestBody =
+                        delimiter +
+                        'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
+                        JSON.stringify(metadata) +
+                        delimiter +
+                        'Content-Type: ' + file.type + '\r\n' +
+                        'Content-Transfer-Encoding: binary\r\n' +
+                        '\r\n' +
+                        fileData +
+                        close_delim;
+
+                    const request = gapi.client.request({
+                        method: 'POST',
+                        path: '/upload/drive/v3/files',
+                        params: { uploadType: 'multipart' },
+                        headers: {
+                            'Content-Type': 'multipart/mixed; boundary="' + boundary + '"',
+                        },
+                        body: multipartRequestBody
+                    });
+
+                    request.then(response => {
+                        if (response.status === 200) {
+                            uploadedFileCount++;
+                            console.log(`Fichier ${file.name} téléchargé.  (${uploadedFileCount}/${totalFiles})`);
+                            if (uploadedFileCount === totalFiles) {
+                                uploadMessage.textContent = 'Tous les fichiers ont été téléchargés avec succès.';
+                                setTimeout(() => {
+                                    uploadMessage.style.display = 'none';
+                                }, 3000);
+                            }
+                        } else {
+                            uploadMessage.style.display = 'none';
+                            showErrorMessage('Erreur lors du téléchargement de ' + file.name + ' : ' + response.body);
+                        }
+                    }).catch(error => {
+                        uploadMessage.style.display = 'none';
+                        showErrorMessage('Erreur lors du téléchargement de ' + file.name + ' : ' + error.message);
+                    });
+                };
+                reader.readAsBinaryString(file);
+            }
+
+            // Étape 1 : Créer un dossier
+            const folderMetadata = {
+                name: folderName,
+                mimeType: 'application/vnd.google-apps.folder'
+            };
+            gapi.client.request({
+                method: 'POST',
+                path: '/drive/v3/files',
+                body: folderMetadata
+            }).then(response => {
+                if (response.status === 200) {
+                    const folderId = response.result.id;
+                    console.log('Dossier créé avec l\'ID :', folderId);
+                    // Étape 2 : Télécharger chaque fichier dans le dossier
+                    for (let i = 0; i < files.length; i++) {
+                        uploadFile(files[i], folderId);
+                    }
+                } else {
+                    uploadMessage.style.display = 'none';
+                    showErrorMessage('Erreur lors de la création du dossier : ' + response.body);
+                }
+            }).catch(error => {
+                uploadMessage.style.display = 'none';
+                showErrorMessage('Erreur lors de la création du dossier : ' + error.message);
+            });
+        }
+    </script>
+</body>
+</html>
