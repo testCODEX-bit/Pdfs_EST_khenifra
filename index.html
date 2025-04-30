@@ -1,512 +1,121 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Téléchargement de fichiers étudiants</title>
+    <title>Student File Upload</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
     <style>
         body {
             font-family: 'Inter', sans-serif;
         }
-        /* Style for admin view */
-        #admin-view {
-            display: none; /* Initially hidden */
-            margin-top: 2rem;
-            padding: 1rem;
-            border: 1px solid #e2e8f0;
-            border-radius: 0.5rem;
-            background-color: #f7fafc;
+        #upload-message {
+            display: none;
         }
-        #admin-view h2 {
-            font-size: 1.5rem;
-            font-weight: 600;
-            margin-bottom: 1rem;
-            color: #2d3748;
-        }
-        #file-uploads-list {
-            list-style: none;
-            padding: 0;
-            margin-bottom: 1rem;
-        }
-        #file-uploads-list li {
-            background-color: white;
-            padding: 0.75rem;
-            border-radius: 0.375rem;
-            margin-bottom: 0.5rem;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            display: flex; /* Use flexbox for alignment */
-            justify-content: space-between; /* Space between file name and status */
-            align-items: center; /* Vertically center items */
-        }
-        #file-uploads-list li span {
-            font-weight: 500; /* Make file name bold */
-            color: #2d3748;
-        }
-        #file-uploads-list li.uploaded {
-            color: green;
-        }
-        #file-uploads-list li.failed {
+        .error-message {
             color: red;
-        }
-        .verify-button {
-            background-color: #4CAF50; /* Green */
-            color: white;
-            padding: 0.5rem 1rem;
-            border: none;
-            border-radius: 0.375rem;
-            cursor: pointer;
             font-size: 0.875rem;
-            transition: background-color 0.3s ease;
+            margin-top: 0.5rem;
         }
-
-        .verify-button:hover {
-            background-color: #367c39; /* Darker green */
-        }
-        .delete-button {
-            background-color: #f44336;
-            color: white;
-            padding: 0.5rem 1rem;
-            border: none;
-            border-radius: 0.375rem;
-            cursor: pointer;
-            font-size: 0.875rem;
-            transition: background-color 0.3s ease;
-        }
-
-        .delete-button:hover {
-            background-color: #d32f2f;
-        }
-        .download-button {
-            background-color: #007bff;
-            color: white;
-            padding: 0.5rem 1rem;
-            border: none;
-            border-radius: 0.375rem;
-            cursor: pointer;
-            font-size: 0.875rem;
-            transition: background-color 0.3s ease;
-        }
-
-        .download-button:hover {
-            background-color: #0056b3;
-        }
-
     </style>
-    <script src="https://apis.google.com/js/api.js"></script>
 </head>
-<body class="bg-gray-100 p-8">
+<body class="bg-gray-100 p-6">
     <div class="container mx-auto p-8 bg-white rounded-lg shadow-md">
-        <h1 class="text-3xl font-semibold text-blue-600 text-center mb-6">Téléchargement de fichiers étudiants</h1>
-        <div id="student-form" class="mb-6">
-            <form id="uploadForm" class="space-y-4">
-                <div>
-                    <label for="studentName" class="block text-gray-700 text-sm font-bold mb-2">Nom de l'étudiant :</label>
-                    <input type="text" id="studentName" required class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-                </div>
-                <div>
-                    <label for="courseName" class="block text-gray-700 text-sm font-bold mb-2">Nom du cours :</label>
-                    <input type="text" id="courseName" required class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-                </div>
-                <div>
-                    <label for="files" class="block text-gray-700 text-sm font-bold mb-2">Télécharger les fichiers :</label>
-                    <input type="file" id="files" multiple required class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-                    <p id="file-error" class="text-red-500 text-xs italic" style="display: none;"></p>
-                </div>
-                <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Télécharger les fichiers</button>
-            </form>
-            <div id="upload-status" class="mt-4 text-gray-600" style="display: none;">
-                <p><span id="status-text"></span></p>
-                <ul id="file-status-list" class="list-disc list-inside"></ul>
+        <h1 class="text-2xl font-semibold text-blue-600 text-center mb-6">Student File Upload</h1>
+        <form id="uploadForm" action="upload.php" method="POST" enctype="multipart/form-data" class="space-y-4">
+            <div>
+                <label for="studentName" class="block text-gray-700 text-sm font-bold mb-2">Student Name:</label>
+                <input type="text" id="studentName" name="studentName" required class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
             </div>
-        </div>
-        <div id="error-message" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mt-6" style="display: none;" role="alert">
-            <strong class="font-bold">Erreur :</strong>
-            <span class="block sm:inline" id="error-text"></span>
-        </div>
-
-        <div id="admin-view">
-            <h2>Fichiers téléchargés</h2>
-            <ul id="file-uploads-list">
-            </ul>
-        </div>
+            <div>
+                <label for="courseName" class="block text-gray-700 text-sm font-bold mb-2">Course Name:</label>
+                <input type="text" id="courseName" name="courseName" required class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+            </div>
+            <div>
+                <label for="files" class="block text-gray-700 text-sm font-bold mb-2">Upload Files (PDF, DOC, DOCX, max 25MB):</label>
+                <input type="file" id="files" name="files[]" multiple required class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                <p id="file-error" class="error-message" style="display: none;"></p>
+            </div>
+            <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Upload Files</button>
+            <div id="upload-message" class="mt-4 text-green-600 font-semibold border border-green-400 p-3 rounded" style="display: none;"></div>
+        </form>
     </div>
+
     <script>
         const uploadForm = document.getElementById('uploadForm');
-        const studentNameInput = document.getElementById('studentName');
-        const courseNameInput = document.getElementById('courseName');
         const filesInput = document.getElementById('files');
         const uploadMessage = document.getElementById('upload-message');
-        const errorMessageDiv = document.getElementById('error-message');
-        const errorText = document.getElementById('error-text');
         const fileError = document.getElementById('file-error');
-        const uploadStatus = document.getElementById('upload-status');
-        const statusText = document.getElementById('status-text');
-        const fileStatusList = document.getElementById('file-status-list');
 
-        // Admin view elements
-        const adminView = document.getElementById('admin-view');
-        const fileUploadsList = document.getElementById('file-uploads-list');
-
-        let uploadedFiles = []; // Array to store file upload info
-        let isAdmin = true; // Set this to true to show admin view, false for student view
-
-        // Configuration de l'API Google Drive
-        const CLIENT_ID = '542162240722-hfi2pssi6lt4tvtdchd2dph2ep2ukqld.apps.googleusercontent.com'; // Remplacez par votre ID client
-        const SCOPES = ['https://www.googleapis.com/auth/drive.file'];
-        let gapiInitialized = false; // Track if gapi is initialized
-
-        function showErrorMessage(message) {
-            errorMessageDiv.style.display = 'block';
-            errorText.textContent = message;
-        }
-
-        function hideErrorMessage() {
-            errorMessageDiv.style.display = 'none';
-            errorText.textContent = '';
-        }
-
-        function validateFiles() {
-            if (!filesInput.value) {
-                fileError.textContent = "Veuillez sélectionner les fichiers à télécharger.";
-                fileError.style.display = "block";
-                return false;
-            }
-
+        filesInput.addEventListener('change', () => {
             const files = filesInput.files;
+            let isValid = true;
+
+            if (files.length > 5) {
+                fileError.textContent = "You can upload a maximum of 5 files.";
+                fileError.style.display = "block";
+                isValid = false;
+            }           
+
             for (let i = 0; i < files.length; i++) {
-                if (files[i].size > 10 * 1024 * 1024) { // Limite de 10 Mo par fichier
-                    fileError.textContent = "Chaque fichier doit être inférieur à 10 Mo.";
+                const file = files[i];
+                const fileSizeMB = file.size / (1024 * 1024);
+
+                if (fileSizeMB > 25) {
+                    fileError.textContent = "File size exceeds 25MB limit.";
                     fileError.style.display = "block";
-                    return false;
+                    isValid = false;
+                    break;
+                }
+
+                const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+                if (!allowedTypes.includes(file.type)) {
+                    fileError.textContent = "Invalid file type. Please upload PDF, DOC, or DOCX files.";
+                    fileError.style.display = "block";
+                    isValid = false;
+                    break;
                 }
             }
 
-            fileError.style.display = "none";
-            return true;
-        }
+            if (isValid) {
+                fileError.style.display = "none";
+            }
+        });
 
-        filesInput.addEventListener('change', validateFiles);
+
 
         uploadForm.addEventListener('submit', (event) => {
             event.preventDefault();
-            hideErrorMessage();
 
-            if (!validateFiles()) {
-                return;
-            }
+            const formData = new FormData(uploadForm);
 
-            const studentName = studentNameInput.value;
-            const courseName = courseNameInput.value;
-            const files = filesInput.files;
-
-            uploadStatus.style.display = 'block';
-            statusText.textContent = 'Téléchargement en cours...';
-            fileStatusList.innerHTML = ''; // Clear previous status
-
-            // Initialize gapi and handle upload
-            if (!gapiInitialized) {
-                gapi.load('client', () => {
-                    gapi.load('drive-v3', () => { // Load the drive-v3 library
-                        gapi.client.init({
-                            clientId: CLIENT_ID,
-                            discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
-                            scope: SCOPES
-                        }).then(() => {
-                            gapiInitialized = true; // Set flag to true after successful init
-                            if (gapi.auth2.getAuthInstance().isSignedIn.get()) {
-                                handleFileUploads(studentName, courseName, files);
-                            } else {
-                                gapi.auth2.getAuthInstance().signIn().then(() => {
-                                    handleFileUploads(studentName, courseName, files);
-                                }).catch(error => {
-                                    uploadStatus.style.display = 'none';
-                                    showErrorMessage('Erreur de connexion à Google Drive : ' + error.message);
-                                });
-                            }
-                        }).catch(error => {
-                            uploadStatus.style.display = 'none';
-                            showErrorMessage('Erreur lors de l\'initialisation de l\'API Google Drive : ' + error.message);
-                        });
-                    });
-                });
-            } else {
-                // gapi is already initialized, proceed with upload
-                if (gapi.auth2.getAuthInstance().isSignedIn.get()) {
-                    handleFileUploads(studentName, courseName, files);
-                } else {
-                    gapi.auth2.getAuthInstance().signIn().then(() => {
-                        handleFileUploads(studentName, courseName, files);
-                    }).catch(error => {
-                        uploadStatus.style.display = 'none';
-                        showErrorMessage('Erreur de connexion à Google Drive : ' + error.message);
-                    });
-                }
-            }
-        });
-
-        function handleFileUploads(studentName, courseName, files) {
-            let uploadedFileCount = 0;
-            const totalFiles = files.length;
-            const folderName = `${studentName}_${courseName}_${Date.now()}`; // Nom de dossier unique
-
-            // Étape 1 : Créer un dossier
-            const folderMetadata = {
-                name: folderName,
-                mimeType: 'application/vnd.google-apps.folder'
-            };
-            gapi.client.request({
+            fetch('upload.php', {
                 method: 'POST',
-                path: '/drive/v3/files',
-                body: folderMetadata
-            }).then(response => {
-                if (response.status === 200) {
-                    const folderId = response.result.id;
-                    console.log('Dossier créé avec l\'ID :', folderId);
-                    // Étape 2 : Télécharger chaque fichier dans le dossier
-                    for (let i = 0; i < files.length; i++) {
-                        uploadFile(files[i], folderId, studentName, courseName, totalFiles); // Pass studentName and courseName
-                    }
-                } else {
-                    uploadStatus.style.display = 'none';
-                    showErrorMessage('Erreur lors de la création du dossier : ' + response.body);
+                body: formData,
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
-            }).catch(error => {
-                uploadStatus.style.display = 'none';
-                showErrorMessage('Erreur lors de la création du dossier : ' + error.message);
+                return response.text();
+            })
+            .then(data => {
+                uploadMessage.textContent = data;
+                uploadMessage.style.display = 'block';
+                uploadForm.reset();
+                 setTimeout(() => {
+                    uploadMessage.style.display = 'none';
+                }, 5000);
+            })
+            .catch(error => {
+                uploadMessage.textContent = 'An error occurred: ' + error.message;
+                uploadMessage.style.display = 'block';
+                 setTimeout(() => {
+                    uploadMessage.style.display = 'none';
+                }, 5000);
             });
-        }
-
-        // Fonction pour gérer le téléchargement d'un seul fichier
-        function uploadFile(file, folderId, studentName, courseName, totalFiles) { // Add studentName and courseName
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const fileData = e.target.result;
-                const boundary = '-------314159265358979323846';
-                const delimiter = "\r\n--" + boundary + "\r\n";
-                const close_delim = "\r\n--" + boundary + "--";
-
-                const metadata = {
-                    name: file.name,
-                    mimeType: file.type,
-                    parents: [folderId] // Télécharger dans le dossier
-                };
-
-                const multipartRequestBody =
-                    delimiter +
-                    'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
-                    JSON.stringify(metadata) +
-                    delimiter +
-                    'Content-Type: ' + file.type + '\r\n' +
-                    'Content-Transfer-Encoding: binary\r\n' +
-                    '\r\n' +
-                    fileData +
-                    close_delim;
-
-                const request = gapi.client.request({
-                    method: 'POST',
-                    path: '/upload/drive/v3/files',
-                    params: { uploadType: 'multipart' },
-                    headers: {
-                        'Content-Type': 'multipart/mixed; boundary="' + boundary + '"',
-                    },
-                    body: multipartRequestBody
-                });
-
-                const fileStatusItem = document.createElement('li');
-                fileStatusItem.innerHTML = `<span>${file.name}</span> : En cours...`;
-                fileStatusList.appendChild(fileStatusItem);
-
-                request.then(response => {
-                    if (response.status === 200) {
-                        uploadedFileCount++;
-                        console.log(`Fichier ${file.name} téléchargé.  (${uploadedFileCount}/${totalFiles})`);
-                        fileStatusItem.textContent = `${file.name} : Téléchargé avec succès.`;
-                        fileStatusItem.className = 'uploaded'; // Add a class for styling
-
-                        // Store file info for admin view
-                        uploadedFiles.push({
-                            studentName: studentName,
-                            courseName: courseName,
-                            fileName: file.name,
-                            fileId: response.result.id, // Store the file ID
-                            status: 'Uploaded',
-                            downloadStatus: 'Not downloaded' // Add download status
-                        });
-                        updateAdminView(); // Update the admin view
-                        if (uploadedFileCount === totalFiles) {
-                            statusText.textContent = 'Tous les fichiers ont été téléchargés avec succès.';
-                            setTimeout(() => {
-                                uploadStatus.style.display = 'none';
-                            }, 3000);
-                        }
-                    } else {
-                        fileStatusItem.textContent = `${file.name} : Échec du téléchargement.`;
-                        fileStatusItem.className = 'failed';
-                        uploadedFiles.push({
-                            studentName: studentName,
-                            courseName: courseName,
-                            fileName: file.name,
-                            fileId: null,
-                            status: 'Failed',
-                            downloadStatus: 'Not downloaded' // Add download status
-                        });
-                        updateAdminView();
-                        uploadStatus.style.display = 'none';
-                        showErrorMessage('Erreur lors du téléchargement de ' + file.name + ' : ' + response.body);
-                    }
-                }).catch(error => {
-                    fileStatusItem.textContent = `${file.name} : Échec du téléchargement.`;
-                    fileStatusItem.className = 'failed';
-                    uploadedFiles.push({
-                        studentName: studentName,
-                        courseName: courseName,
-                        fileName: file.name,
-                        fileId: null,
-                        status: 'Failed',
-                        downloadStatus: 'Not downloaded' // Add download status
-                    });
-                    updateAdminView();
-                    uploadStatus.style.display = 'none';
-                    showErrorMessage('Erreur lors du téléchargement de ' + file.name + ' : ' + error.message);
-                });
-            };
-            reader.readAsBinaryString(file);
-        }
-
-        function updateAdminView() {
-            fileUploadsList.innerHTML = ''; // Clear the list
-            uploadedFiles.forEach(file => {
-                const listItem = document.createElement('li');
-                listItem.innerHTML = `
-                    <span>${file.studentName} - ${file.courseName} - ${file.fileName}</span> : ${file.status} , Download Status: <span id="download-status-${file.fileId}">${file.downloadStatus}</span>
-                    ${file.status === 'Uploaded' ? `<button class="verify-button" data-fileid="${file.fileId}">Verify</button>` : ''}
-                    <button class="delete-button" data-filename="${file.fileName}">Delete</button>
-                    <button class="download-button" data-fileid="${file.fileId}">Download</button>
-                    <div id="download-progress-${file.fileId}" class="progress" style="display:none;">
-                        <div class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
-                    </div>
-                `;
-                listItem.className = file.status === 'Uploaded' ? 'uploaded' : 'failed';
-                fileUploadsList.appendChild(listItem);
-            });
-            adminView.style.display = isAdmin ? 'block' : 'none';
-        }
-
-        // Event listener for admin view buttons (using event delegation)
-        fileUploadsList.addEventListener('click', (event) => {
-            if (event.target.classList.contains('verify-button')) {
-                const fileId = event.target.dataset.fileid;
-                console.log('Verifying file with ID:', fileId);
-                //  Add code here to communicate with your backend to verify the file in Google Drive
-                //  You would typically send an API request to your server, which would then
-                //  use the Google Drive API to confirm the file's existence and metadata.
-                alert(`Fichier ${fileId} vérifié (Simulé).`); // Replace with actual verification logic
-            }
-
-            if (event.target.classList.contains('delete-button')) {
-                const fileName = event.target.dataset.filename;
-                console.log('Deleting file:', fileName);
-                // Add code here to communicate with your backend to delete the file.
-                //  This would involve sending an API request to your server, which would then
-                //  use the Google Drive API to delete the file.
-                alert(`Fichier ${fileName} supprimé (Simulé).`); // Replace with actual deletion logic
-
-                // Remove the file from the uploadedFiles array and update the admin view
-                uploadedFiles = uploadedFiles.filter(file => file.fileName !== fileName);
-                updateAdminView();
-            }
-
-            if (event.target.classList.contains('download-button')) {
-                const fileId = event.target.dataset.fileid;
-                console.log('Downloading file:', fileId);
-
-                // Get the download URL (replace with your actual download URL retrieval)
-                const downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;  // Basic download URL -  Change this
-
-                // Get the progress bar element
-                const progressBar = document.getElementById(`download-progress-${fileId}`).querySelector('.progress-bar');
-                const progressContainer = document.getElementById(`download-progress-${fileId}`);
-                progressContainer.style.display = 'block'; // Show the progress bar
-
-                // Update the download status in the admin view
-                const downloadStatusElement = document.getElementById(`download-status-${fileId}`);
-                if (downloadStatusElement) {
-                    downloadStatusElement.textContent = 'Downloading...';
-                }
-
-                // Use fetch to download with progress tracking
-                fetch(downloadUrl)
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error(`HTTP error! status: ${response.status}`);
-                        }
-                        const contentLength = response.headers.get('content-length');
-                        if (contentLength === null) {
-                            throw new Error("Content-Length header not found!");
-                        }
-                        const total = parseInt(contentLength, 10);
-                        let loaded = 0;
-                        const reader = response.body.getReader();
-                        const chunks = [];
-
-                        const read = () => {
-                            reader.read().then(({ done, value }) => {
-                                if (done) {
-                                    // Download complete
-                                    console.log('Download complete');
-                                    downloadStatusElement.textContent = 'Downloaded';
-                                    progressBar.style.width = '100%';
-                                    progressBar.setAttribute('aria-valuenow', 100);
-                                    progressBar.textContent = '100%';
-
-                                    // Create a blob from the chunks and initiate download
-                                    const blob = new Blob(chunks);
-                                    const url = URL.createObjectURL(blob);
-                                    const a = document.createElement('a');
-                                    a.href = url;
-                                    a.download = `file-${fileId}`;  //  Use a meaningful name
-                                    document.body.appendChild(a);
-                                    a.click();
-                                    document.body.removeChild(a);
-                                    URL.revokeObjectURL(url);
-                                    return;
-                                }
-                                loaded += value.length;
-                                chunks.push(value);
-                                const progress = total ? Math.round((loaded / total) * 100) : 0;
-                                console.log(`Download progress: ${progress}%`);
-                                progressBar.style.width = `${progress}%`;
-                                progressBar.setAttribute('aria-valuenow', progress);
-                                progressBar.textContent = `${progress}%`;
-                                read(); // Continue reading
-                            }).catch(error => {
-                                console.error('Error reading stream:', error);
-                                downloadStatusElement.textContent = 'Download Failed';
-                                progressBar.style.backgroundColor = '#dc3545';
-                                progressBar.textContent = 'Failed';
-                            });
-                        };
-                        read();
-                    })
-                    .catch(error => {
-                        // Handle network errors
-                        console.error('Error downloading file:', error);
-                        downloadStatusElement.textContent = 'Download Failed';
-                        progressBar.style.backgroundColor = '#dc3545';
-                        progressBar.textContent = 'Failed';
-                    });
-            }
         });
-
-        // Show Admin View
-        if (isAdmin) {
-            adminView.style.display = 'block';
-            updateAdminView();
-        } else {
-            adminView.style.display = 'none';
-        }
     </script>
 </body>
 </html>
